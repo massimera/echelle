@@ -11,19 +11,88 @@
 <div id="resultat"></div>
 
 </body>
-<script>
+<script type="module">
+    import {posiColor} from './modules/posiColor.js';
 
-    let data, urlData = "https://github.com/massimera/echelles/blob/main/modules/Feuille%20de%20calcul%20sans%20titre%20-%20reuses.csv";
-
-    d3.json(urlData).then(rs=>{
-        data = rs;
+    let data, 
+        //urlData = "http://localhost/samszo/HDR/docs/assets/data/complexityFrequency.json",
+        urlData = "synthese-fra.csv",
+        width = 600, height=600, widthLibTxt=120, svg,  
+        valX='date',valGroupe='total_cas_confirmes	',valY='total_deces_hopital',
+        bandY,
+        interpolates = false;
+        /*{
+                'Existence':d3.interpolateViridis,
+                'Physique':d3.interpolatePlasma,
+                'Actant':d3.interpolatePlasma,
+                'Concept':d3.interpolatePlasma,
+                'Rapport':d3.interpolateYlOrRd
+            };
+        */
+    //d3.json(urlData).then(rs=>{
+    d3.csv(urlData).then(rs=>{
+        console.log(rs);
+        data = setData(rs);
         console.log(data);
-        data.details.forEach(element => {
-            console.log(element);
-        });
-
+        //setGraph(data);
+        setAxis(data);
     })
 
+    function setData(rs){
+        data = Array.from(d3.group(rs, d => d[valGroupe]));
+        //création de l'échelle par bandes
+        //cf. https://observablehq.com/@d3/d3-scaleband
+        bandY = d3.scaleBand(data.map(d=>d[0]), [0, height]).paddingInner(0.2).paddingOuter(0.2);
+        data = data.map(d=>{
+                    let extX = d3.extent(d[1], d=>d[valX]),
+                        extY = d3.extent(d[1], d=>d[valY]),
+                        o = {'vals':d[1],
+                        'extX':[1,extX[1]],                        
+                        //'scX':d3.scaleSymlog().domain(extX).range([widthLibTxt, width-widthLibTxt]),
+                        //'scY':d3.scaleSymlog().domain(extY).range([0, bandY.bandwidth()])
+                        //'scX':d3.scaleLog().domain(extX).range([widthLibTxt, width-widthLibTxt]),
+                        //'scY':d3.scaleLog().domain(extY).range([0, bandY.bandwidth()])                        
+                        'scX':d3.scaleLinear().domain(extX).range([widthLibTxt, width-widthLibTxt]),
+                        'scY':d3.scaleLinear().domain(extY).range([0, bandY.bandwidth()])
+                        };
+                        o[valGroupe]=d[0];
+                    return o;
+                });
+        return data;
+    }
+
+    function setGraph(data){
+        //liste des echelle de couleurs : https://d3js.org/d3-scale-chromatic/sequential
+        let pc = new posiColor({'data':data,'cont':d3.select('#resultat')
+            , 'pVal':pVal,'pLib':pLib, 'pFreq':pFreq,'frequency':false, tickFormat:",.0f"
+            , 'interpolates':interpolates        
+        })
+    }    
+
+    function setAxis(data){
+
+        let svg = d3.select('#resultat').append('svg')
+                //.attr("viewBox", [0, 0, width, height])
+                .attr("x", 0)
+                .attr("y", 0)
+                .attr("width", width+widthLibTxt)
+                .attr("height", height)
+                .attr("style", "max-width: 100%; height: auto;")
+                .style("font", "14px sans-serif"),
+            dim = svg.selectAll('g').data(data).enter().append("g")
+                .attr("transform",(d,i)=>`translate(0,${bandY(d[valGroupe])})`);
+            dim.append("text").text(d=>{
+                return d[valGroupe]
+            })
+            dim.append("g").attr("transform", (d,i)=>`translate(widthLibTxt,0)`).attr('id',(d,i)=>'axisX'+i)
+                .each((d,i)=>{
+                    d3.select('#axisX'+i).call(d3.axisTop(d.scX));
+                })
+            dim.append("g").attr("transform", (d,i)=>`translate(${widthLibTxt},0)`).attr('id',(d,i)=>'axisY'+i)
+                .each((d,i)=>{
+                    d3.select('#axisY'+i).call(d3.axisLeft(d.scY));
+                })
+    }
 
 </script>
 </html>
