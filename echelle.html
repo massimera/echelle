@@ -39,7 +39,7 @@
     })
 
     function setData(rs){
-        data = Array.from(d3.group(rs, d => d[valGroupe]));
+        data = Array.from(d3.group(data, d => d[valGroupe]));
         //création de l'échelle par bandes
         //cf. https://observablehq.com/@d3/d3-scaleband
         bandY = d3.scaleBand(data.map(d=>d[0]), [0, height]).paddingInner(0.2).paddingOuter(0.2);
